@@ -10,6 +10,10 @@
 #include "UnlockManager.h"
 #include "SongUtil.h"
 
+#include <unordered_map>
+
+using std::vector;
+
 bool StepsCriteria::Matches( const Song *pSong, const Steps *pSteps ) const
 {
 	if( m_difficulty != Difficulty_Invalid  &&  pSteps->GetDifficulty() != m_difficulty )
@@ -40,14 +44,14 @@ bool StepsCriteria::Matches( const Song *pSong, const Steps *pSteps ) const
 
 void StepsUtil::GetAllMatching( const SongCriteria &soc, const StepsCriteria &stc, vector<SongAndSteps> &out )
 {
-	const RString &sGroupName = soc.m_sGroupName.empty()? GROUP_ALL:soc.m_sGroupName;
+	const std::string &sGroupName = soc.m_sGroupName.empty()? GROUP_ALL:soc.m_sGroupName;
         const vector<Song*> &songs = SONGMAN->GetSongs( sGroupName );
 
-	FOREACH_CONST( Song*, songs, so )
+	for (auto *so: songs)
 	{
-		if( !soc.Matches(*so) )
+		if( !soc.Matches(so) )
 			continue;
-		GetAllMatching( *so, stc, out );
+		GetAllMatching( so, stc, out );
 	}
 }
 
@@ -55,39 +59,71 @@ void StepsUtil::GetAllMatching( Song *pSong, const StepsCriteria &stc, vector<So
 {
 	const vector<Steps*> &vSteps = ( stc.m_st == StepsType_Invalid ?  pSong->GetAllSteps() :
 					 pSong->GetStepsByStepsType(stc.m_st) );
-	
-	FOREACH_CONST( Steps*, vSteps, st )
-		if( stc.Matches(pSong, *st) )
-			out.push_back( SongAndSteps(pSong, *st) );
+
+	for (auto *st: vSteps)
+	{
+		if( stc.Matches(pSong, st) )
+			out.push_back( SongAndSteps(pSong, st) );
+	}
+}
+
+void StepsUtil::GetAllMatchingEndless( Song *pSong, const StepsCriteria &stc, vector<SongAndSteps> &out )
+{
+	const vector<Steps*> &vSteps = ( stc.m_st == StepsType_Invalid ? pSong->GetAllSteps() :
+		pSong->GetStepsByStepsType( stc.m_st ) );
+	int previousSize = out.size();
+	int successful = false;
+
+	GetAllMatching( pSong, stc, out );
+	if( out.size() != previousSize )
+	{
+		successful = true;
+	}
+
+	if( !successful )
+	{
+		Difficulty difficulty = ( *( vSteps.begin() ) )->GetDifficulty();
+		Difficulty previousDifficulty = difficulty;
+		int lowestDifficultyIndex = 0;
+		vector<Difficulty> difficulties;
+		for (auto st = vSteps.begin(); st != vSteps.end(); ++st)
+		{
+			previousDifficulty = difficulty;
+			difficulty = ( *st )->GetDifficulty();
+			if( ( st - vSteps.begin() ) == 0 )
+			{
+				continue;
+			}
+			if( difficulty < previousDifficulty )
+			{
+				lowestDifficultyIndex = st - vSteps.begin();
+			}
+		}
+		out.push_back( SongAndSteps( pSong, vSteps.at( lowestDifficultyIndex ) ) );
+	}
 }
 
 bool StepsUtil::HasMatching( const SongCriteria &soc, const StepsCriteria &stc )
 {
-	const RString &sGroupName = soc.m_sGroupName.empty()? GROUP_ALL:soc.m_sGroupName;
-        const vector<Song*> &songs = SONGMAN->GetSongs( sGroupName );
-
-	FOREACH_CONST( Song*, songs, so )
-	{
-		if( soc.Matches(*so) && HasMatching(*so, stc) )
-		        return true;
-	}
-	return false;
+	const std::string &sGroupName = soc.m_sGroupName.empty()? GROUP_ALL:soc.m_sGroupName;
+	const vector<Song*> &songs = SONGMAN->GetSongs( sGroupName );
+	auto hasMatch = [&soc, &stc](Song const *song) {
+		return soc.Matches(song) && HasMatching(song, stc);
+	};
+	return std::any_of(songs.begin(), songs.end(), hasMatch);
 }
 
 bool StepsUtil::HasMatching( const Song *pSong, const StepsCriteria &stc )
 {
 	const vector<Steps*> &vSteps = stc.m_st == StepsType_Invalid? pSong->GetAllSteps():pSong->GetStepsByStepsType( stc.m_st );
-	
-	FOREACH_CONST( Steps*, vSteps, st )
-	{
-		if( stc.Matches(pSong, *st) )
-	  	        return true;
-	}
-	return false;
+	auto hasMatch = [pSong, &stc](Steps const *step) {
+		return stc.Matches(pSong, step);
+	};
+	return std::any_of(vSteps.begin(), vSteps.end(), hasMatch);
 }
 
 // Sorting stuff
-map<const Steps*, RString> steps_sort_val;
+std::unordered_map<const Steps*, std::string> steps_sort_val;
 
 static bool CompareStepsPointersBySortValueAscending(const Steps *pSteps1, const Steps *pSteps2)
 {
@@ -112,15 +148,13 @@ void StepsUtil::SortStepsPointerArrayByNumPlays( vector<Steps*> &vStepsPointers,
 	// ugly...
 	vector<Song*> vpSongs = SONGMAN->GetAllSongs();
 	vector<Steps*> vpAllSteps;
-	map<Steps*,Song*> mapStepsToSong;
+	std::unordered_map<Steps*,Song*> mapStepsToSong;
 	{
-		for( unsigned i=0; i<vpSongs.size(); i++ )
+		for (auto *pSong: vpSongs)
 		{
-			Song* pSong = vpSongs[i];
 			vector<Steps*> vpSteps = pSong->GetAllSteps();
-			for( unsigned j=0; j<vpSteps.size(); j++ )
+			for (auto *pSteps: vpSteps)
 			{
-				Steps* pSteps = vpSteps[j];
 				if( pSteps->IsAutogen() )
 					continue;	// skip
 				vpAllSteps.push_back( pSteps );
@@ -129,12 +163,11 @@ void StepsUtil::SortStepsPointerArrayByNumPlays( vector<Steps*> &vStepsPointers,
 		}
 	}
 
-	ASSERT( pProfile != NULL );
-	for(unsigned i = 0; i < vStepsPointers.size(); ++i)
+	ASSERT( pProfile != nullptr );
+	for (auto *pSteps: vStepsPointers)
 	{
-		Steps* pSteps = vStepsPointers[i];
 		Song* pSong = mapStepsToSong[pSteps];
-		steps_sort_val[vStepsPointers[i]] = ssprintf("%9i", pProfile->GetStepsNumTimesPlayed(pSong,pSteps));
+		steps_sort_val[pSteps] = fmt::sprintf("%9i", pProfile->GetStepsNumTimesPlayed(pSong,pSteps));
 	}
 	stable_sort( vStepsPointers.begin(), vStepsPointers.end(), bDecending ? CompareStepsPointersBySortValueDescending : CompareStepsPointersBySortValueAscending );
 	steps_sort_val.clear();
@@ -177,7 +210,9 @@ bool StepsUtil::CompareStepsPointersByTypeAndDifficulty(const Steps *pStep1, con
 		return true;
 	if( pStep1->m_StepsType > pStep2->m_StepsType )
 		return false;
-	return pStep1->GetDifficulty() < pStep2->GetDifficulty();
+	if(pStep1->GetDifficulty() < pStep2->GetDifficulty()) { return true; }
+	if(pStep1->GetDifficulty() > pStep2->GetDifficulty()) { return false; }
+	return pStep1->GetMeter() < pStep2->GetMeter();
 }
 
 void StepsUtil::SortStepsByTypeAndDifficulty( vector<Steps*> &arraySongPointers )
@@ -187,7 +222,9 @@ void StepsUtil::SortStepsByTypeAndDifficulty( vector<Steps*> &arraySongPointers 
 
 bool StepsUtil::CompareStepsPointersByDescription(const Steps *pStep1, const Steps *pStep2)
 {
-	return pStep1->GetDescription().CompareNoCase( pStep2->GetDescription() ) < 0;
+	Rage::ci_ascii_string a{ pStep1->GetDescription().c_str() };
+	Rage::ci_ascii_string b{ pStep2->GetDescription().c_str() };
+	return a < b;
 }
 
 void StepsUtil::SortStepsByDescription( vector<Steps*> &arraySongPointers )
@@ -211,7 +248,7 @@ void StepsUtil::RemoveLockedSteps( const Song *pSong, vector<Steps*> &vpSteps )
 
 void StepsID::FromSteps( const Steps *p )
 {
-	if( p == NULL )
+	if( p == nullptr )
 	{
 		st = StepsType_Invalid;
 		dc = Difficulty_Invalid;
@@ -242,19 +279,19 @@ void StepsID::FromSteps( const Steps *p )
  *
  * XXX: Unless two memcards are inserted and there's overlap in the names.  In that
  * case, maybe both edits should be renamed to "Pn: foo"; as long as we don't write
- * them back out (which we don't do except in the editor), it won't be permanent. 
+ * them back out (which we don't do except in the editor), it won't be permanent.
  * We could do this during the actual Steps::GetID() call, instead, but then it'd have
  * to have access to Song::m_LoadedFromProfile. */
 
 Steps *StepsID::ToSteps( const Song *p, bool bAllowNull ) const
 {
 	if( st == StepsType_Invalid || dc == Difficulty_Invalid )
-		return NULL;
+		return nullptr;
 
 	SongID songID;
 	songID.FromSong( p );
 
-	Steps *pRet = NULL;
+	Steps *pRet = nullptr;
 	if( dc == Difficulty_Edit )
 	{
 		pRet = SongUtil::GetOneSteps( p, st, dc, -1, -1, sDescription, "", uHash, true );
@@ -263,12 +300,12 @@ Steps *StepsID::ToSteps( const Song *p, bool bAllowNull ) const
 	{
 		pRet = SongUtil::GetOneSteps( p, st, dc, -1, -1, "", "", 0, true );
 	}
-	
-	if( !bAllowNull && pRet == NULL )
-		FAIL_M( ssprintf("%i, %i, \"%s\"", st, dc, sDescription.c_str()) );
+
+	if( !bAllowNull && pRet == nullptr )
+		FAIL_M( fmt::sprintf("%i, %i, \"%s\"", st, dc, sDescription.c_str()) );
 
 	m_Cache.Set( pRet );
-	
+
 	return pRet;
 }
 
@@ -276,7 +313,7 @@ XNode* StepsID::CreateNode() const
 {
 	XNode* pNode = new XNode( "Steps" );
 
-	pNode->AppendAttr( "StepsType", GAMEMAN->GetStepsTypeInfo(st).szName );
+	pNode->AppendAttr( "StepsType", GAMEMAN->GetStepsTypeInfo(st).stepTypeName );
 	pNode->AppendAttr( "Difficulty", DifficultyToString(dc) );
 	if( dc == Difficulty_Edit )
 	{
@@ -287,11 +324,11 @@ XNode* StepsID::CreateNode() const
 	return pNode;
 }
 
-void StepsID::LoadFromNode( const XNode* pNode ) 
+void StepsID::LoadFromNode( const XNode* pNode )
 {
 	ASSERT( pNode->GetName() == "Steps" );
 
-	RString sTemp;
+	std::string sTemp;
 
 	pNode->GetAttrValue( "StepsType", sTemp );
 	st = GAMEMAN->StringToStepsType( sTemp );
@@ -313,14 +350,14 @@ void StepsID::LoadFromNode( const XNode* pNode )
 	m_Cache.Unset();
 }
 
-RString StepsID::ToString() const
+std::string StepsID::ToString() const
 {
-	RString s = GAMEMAN->GetStepsTypeInfo( st ).szName;
+  std::string s = GAMEMAN->GetStepsTypeInfo( st ).stepTypeName;
 	s += " " + DifficultyToString( dc );
 	if( dc == Difficulty_Edit )
 	{
 		s += " " + sDescription;
-		s += ssprintf(" %u", uHash );
+		s += fmt::sprintf(" %u", uHash );
 	}
 	return s;
 }
@@ -363,7 +400,7 @@ bool StepsID::operator==(const StepsID &rhs) const
 /*
  * (c) 2001-2004 Chris Danford, Glenn Maynard
  * All rights reserved.
- * 
+ *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the
  * "Software"), to deal in the Software without restriction, including
@@ -373,7 +410,7 @@ bool StepsID::operator==(const StepsID &rhs) const
  * copyright notice(s) and this permission notice appear in all copies of
  * the Software and that both the above copyright notice(s) and this
  * permission notice appear in supporting documentation.
- * 
+ *
  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
  * OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
  * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT OF

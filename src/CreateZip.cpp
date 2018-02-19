@@ -14,6 +14,7 @@ typedef char TCHAR;
 #include "CreateZip.h"
 #include "RageFile.h"
 #include "RageUtil.h"
+#include "RageUtil.hpp"
 
 #define MAX_PATH 1024
 
@@ -103,7 +104,7 @@ typedef char TCHAR;
 #define ZR_ENDED      0x00050000     // the zip creation has already been closed
 #define ZR_MISSIZE    0x00060000     // the indicated input file size turned out mistaken
 #define ZR_PARTIALUNZ 0x00070000     // the file had already been partially unzipped
-#define ZR_ZMODE      0x00080000     // tried to mix creating/opening a zip 
+#define ZR_ZMODE      0x00080000     // tried to mix creating/opening a zip
 // The following come from bugs within the zip library itself
 #define ZR_BUGMASK    0xFF000000
 #define ZR_NOTINITED  0x01000000     // initialisation didn't work
@@ -111,13 +112,13 @@ typedef char TCHAR;
 #define ZR_NOCHANGE   0x04000000     // changed its mind on storage, but not allowed
 #define ZR_FLATE      0x05000000     // an internal error in the de/inflation code
 
-	RString FormatZipMessageZ(ZRESULT code)
-	{ 
+	std::string FormatZipMessageZ(ZRESULT code)
+	{
 		const char *msg="unknown zip result code";
 		switch (code)
 		{
 		case ZR_OK: msg="Success"; break;
-		case ZR_NODUPH: msg="Culdn't duplicate handle"; break;
+		case ZR_NODUPH: msg="Couldn't duplicate handle"; break;
 		case ZR_NOFILE: msg="Couldn't create/open file"; break;
 		case ZR_NOALLOC: msg="Failed to allocate memory"; break;
 		case ZR_WRITE: msg="Error writing to file"; break;
@@ -532,7 +533,7 @@ const ulg crc_table[256] = {
 
 ulg crc32(ulg crc, const uch *buf, size_t len)
 {
-	if (buf==NULL) return 0L;
+	if (buf==nullptr) return 0L;
 	crc = crc ^ 0xffffffffL;
 	while (len >= 8) {DO8(buf); len -= 8;}
 	if (len) do {DO1(buf);} while (--len);
@@ -541,9 +542,9 @@ ulg crc32(ulg crc, const uch *buf, size_t len)
 
 
 class TZip
-{ 
+{
 public:
-	TZip() : pfout(NULL),ooffset(0),oerr(false),writ(0),hasputcen(false),zfis(0),hfin(0)
+	TZip() : pfout(nullptr),ooffset(0),oerr(false),writ(0),hasputcen(false),zfis(0),hfin(0)
 	{
 	}
 	~TZip()
@@ -600,8 +601,8 @@ public:
 
 
 ZRESULT TZip::Start(RageFile *f)
-{ 
-	if (pfout!=0 || writ!=0 || oerr!=ZR_OK || hasputcen) 
+{
+	if (pfout!=0 || writ!=0 || oerr!=ZR_OK || hasputcen)
 		return ZR_NOTINITED;
 	//
 	pfout = f;
@@ -623,15 +624,15 @@ unsigned TZip::sflush(void *param,const char *buf, unsigned *size)
 unsigned TZip::swrite(void *param,const char *buf, unsigned size)
 {
 	// static
-	if (size==0) 
+	if (size==0)
 		return 0;
 	TZip *zip=(TZip*)param;
 	return zip->write(buf,size);
 }
 unsigned int TZip::write(const char *buf,unsigned int size)
-{ 
+{
 	const char *srcbuf=buf;
-	if (pfout != NULL)
+	if (pfout != nullptr)
 	{
 		unsigned long writ = pfout->Write( srcbuf, size );
 		return writ;
@@ -641,8 +642,8 @@ unsigned int TZip::write(const char *buf,unsigned int size)
 }
 
 bool TZip::oseek(unsigned int pos)
-{ 
-	oerr=ZR_SEEK; 
+{
+	oerr=ZR_SEEK;
 	return false;
 }
 
@@ -650,9 +651,9 @@ ZRESULT TZip::Close()
 {
 	// if the directory hadn't already been added through a call to GetMemory,
 	// then we do it now
-	ZRESULT res=ZR_OK; 
-	if (!hasputcen) 
-		res=AddCentral(); 
+	ZRESULT res=ZR_OK;
+	if (!hasputcen)
+		res=AddCentral();
 	hasputcen=true;
 	pfout->Close();
 	return res;
@@ -672,14 +673,14 @@ ZRESULT TZip::Close()
 #define ZIP_ATTR_EXECUTABLE 0x00400000
 
 ZRESULT TZip::open_file(const TCHAR *fn)
-{ 
+{
 	hfin=0; bufin=0; crc=CRCVAL_INITIAL; isize=0; csize=0; ired=0;
-	if (fn==0) 
+	if (fn==0)
 		return ZR_ARGS;
 	hfin = new RageFile();
 	if( !hfin->Open(fn) )
 	{
-		SAFE_DELETE( hfin );
+		Rage::safe_delete( hfin );
 		return ZR_NOFILE;
 	}
 	isize = hfin->GetFileSize();
@@ -688,7 +689,7 @@ ZRESULT TZip::open_file(const TCHAR *fn)
 }
 
 ZRESULT TZip::open_dir()
-{ 
+{
 	hfin=0; bufin=0; crc=CRCVAL_INITIAL; isize=0; csize=0; ired=0;
 	attr= ZIP_ATTR_DIRECTORY2 | ZIP_ATTR_READABLE | ZIP_ATTR_WRITEABLE | ZIP_ATTR_DIRECTORY;
 	isize = 0;
@@ -697,7 +698,7 @@ ZRESULT TZip::open_dir()
 
 
 void filetime2dosdatetime(const tm st, unsigned short *dosdate,unsigned short *dostime)
-{ 
+{
 	// date: bits 0-4 are day of month 1-31. Bits 5-8 are month 1..12. Bits 9-15 are year-1980
 	// time: bits 0-4 are seconds/2, bits 5-10 are minute 0..59. Bits 11-15 are hour 0..23
 	*dosdate = (unsigned short)(((st.tm_year+1900-1980)&0x7f) << 9);
@@ -715,9 +716,9 @@ ZRESULT TZip::set_times()
 	time ( &rawtime );
 	ptm = localtime ( &rawtime );
 
-	unsigned short dosdate,dostime; 
+	unsigned short dosdate,dostime;
 	filetime2dosdatetime(*ptm,&dosdate,&dostime);
-	times.atime = time(NULL);
+	times.atime = time(nullptr);
 	times.mtime = times.atime;
 	times.ctime = times.atime;
 	timestamp = (unsigned short)dostime | (((unsigned long)dosdate)<<16);
@@ -725,12 +726,12 @@ ZRESULT TZip::set_times()
 }
 
 unsigned TZip::read(char *buf, unsigned size)
-{ 
+{
 	if (bufin!=0)
-	{ 
+	{
 		if (posin>=lenin) return 0; // end of input
 		ulg red = lenin-posin;
-		if (red>size) 
+		if (red>size)
 			red=size;
 		memcpy(buf, bufin+posin, red);
 		posin += red;
@@ -739,7 +740,7 @@ unsigned TZip::read(char *buf, unsigned size)
 		return red;
 	}
 	else if (hfin!=0)
-	{ 
+	{
 		int red = hfin->Read(buf,size);
 		if (red <= 0)
 			return 0;
@@ -749,34 +750,34 @@ unsigned TZip::read(char *buf, unsigned size)
 	}
 	else
 	{
-		oerr=ZR_NOTINITED; 
+		oerr=ZR_NOTINITED;
 		return 0;
 	}
 }
 
 ZRESULT TZip::iclose()
-{ 
+{
 	if (hfin!=0)
-		SAFE_DELETE( hfin); 
+		Rage::safe_delete( hfin);
 	bool mismatch = (isize!=-1 && isize!=ired);
 	isize=ired; // and crc has been being updated anyway
-	if (mismatch) 
+	if (mismatch)
 		return ZR_MISSIZE;
-	else 
+	else
 		return ZR_OK;
 }
 
 
 ZRESULT TZip::istore()
-{ 
+{
 	ulg size=0;
 	for (;;)
 	{
-		unsigned int cin=read(buf,16384); 
-		if (cin<=0 || cin==(unsigned int)EOF) 
+		unsigned int cin=read(buf,16384);
+		if (cin<=0 || cin==(unsigned int)EOF)
 			break;
-		unsigned int cout = write(buf,cin); 
-		if (cout!=cin) 
+		unsigned int cout = write(buf,cin);
+		if (cout!=cin)
 			return ZR_MISSIZE;
 		size += cin;
 	}
@@ -798,13 +799,13 @@ ZRESULT TZip::Add(const TCHAR *odstzn, const TCHAR *src,unsigned long flags)
 
 	// zip has its own notion of what its names should look like: i.e. dir/file.stuff
 	TCHAR dstzn[MAX_PATH]; _tcscpy(dstzn,odstzn);
-	if (*dstzn==0) 
+	if (*dstzn==0)
 		return ZR_ARGS;
-	TCHAR *d=dstzn; 
+	TCHAR *d=dstzn;
 	while (*d!=0)
 	{
-		if (*d=='\\') 
-			*d='/'; 
+		if (*d=='\\')
+			*d='/';
 		d++;
 	}
 	bool isdir = (flags==ZIP_FOLDER);
@@ -813,20 +814,20 @@ ZRESULT TZip::Add(const TCHAR *odstzn, const TCHAR *src,unsigned long flags)
 
 	// now open whatever was our input source:
 	ZRESULT openres;
-	if (flags==ZIP_FILENAME) 
+	if (flags==ZIP_FILENAME)
 		openres=open_file(src);
-	else if (flags==ZIP_FOLDER) 
+	else if (flags==ZIP_FOLDER)
 		openres=open_dir();
-	else 
+	else
 		return ZR_ARGS;
-	if (openres!=ZR_OK) 
+	if (openres!=ZR_OK)
 		return openres;
 
 	// A zip "entry" consists of a local header (which includes the file name),
 	// then the compressed data, and possibly an extended local header.
 
 	// Initialize the local header
-	TZipFileInfo zfi; zfi.nxt=NULL;
+	TZipFileInfo zfi; zfi.nxt=nullptr;
 	strcpy(zfi.name,"");
 #ifdef UNICODE
 	WideCharToMultiByte(CP_UTF8,0,dstzn,-1,zfi.iname,MAX_PATH,0,0);
@@ -836,13 +837,13 @@ ZRESULT TZip::Add(const TCHAR *odstzn, const TCHAR *src,unsigned long flags)
 	zfi.nam=strlen(zfi.iname);
 	if (needs_trailing_slash)
 	{
-		strcat(zfi.iname,"/"); 
+		strcat(zfi.iname,"/");
 		zfi.nam++;
 	}
 	strcpy(zfi.zname,"");
-	zfi.extra=NULL; zfi.ext=0;   // extra header to go after this compressed data, and its length
-	zfi.cextra=NULL; zfi.cext=0; // extra header to go in the central end-of-zip directory, and its length
-	zfi.comment=NULL; zfi.com=0; // comment, and its length
+	zfi.extra=nullptr; zfi.ext=0;   // extra header to go after this compressed data, and its length
+	zfi.cextra=nullptr; zfi.cext=0; // extra header to go in the central end-of-zip directory, and its length
+	zfi.comment=nullptr; zfi.com=0; // comment, and its length
 	zfi.mark = 1;
 	zfi.dosflag = 0;
 	zfi.att = (ush)BINARY;
@@ -887,9 +888,9 @@ ZRESULT TZip::Add(const TCHAR *odstzn, const TCHAR *src,unsigned long flags)
 
 	// (1) Start by writing the local header:
 	int r = putlocal(&zfi,swrite,this);
-	if (r!=ZE_OK) 
+	if (r!=ZE_OK)
 	{
-		iclose(); 
+		iclose();
 		return ZR_WRITE;
 	}
 	writ += 4 + LOCHEAD + (unsigned int)zfi.nam + (unsigned int)zfi.ext;
@@ -901,15 +902,15 @@ ZRESULT TZip::Add(const TCHAR *odstzn, const TCHAR *src,unsigned long flags)
 
 	//(2) Write stored file to zip file
 	ZRESULT writeres=ZR_OK;
-	if (!isdir && method==STORE) 
+	if (!isdir && method==STORE)
 		writeres=istore();
-	else if (isdir) 
+	else if (isdir)
 		csize=0;
 	else
 		FAIL_M("deflate removed");
 	iclose();
 	writ += csize;
-	if (oerr!=ZR_OK) 
+	if (oerr!=ZR_OK)
 		return oerr;
 	if (writeres!=ZR_OK)
 		return ZR_WRITE;
@@ -920,11 +921,11 @@ ZRESULT TZip::Add(const TCHAR *odstzn, const TCHAR *src,unsigned long flags)
 	zfi.siz = csize;
 	zfi.len = isize;
 	// (4) ... or put an updated header at the end
-	if (zfi.how != (ush) method) 
+	if (zfi.how != (ush) method)
 		return ZR_NOCHANGE;
-	if (method==STORE && !first_header_has_size_right) 
+	if (method==STORE && !first_header_has_size_right)
 		return ZR_NOCHANGE;
-	if ((r = putextended(&zfi, swrite,this)) != ZE_OK) 
+	if ((r = putextended(&zfi, swrite,this)) != ZE_OK)
 		return ZR_WRITE;
 	writ += 16L;
 	zfi.flg = zfi.lflg; // if flg modified by inflate, for the central index
@@ -935,13 +936,13 @@ ZRESULT TZip::Add(const TCHAR *odstzn, const TCHAR *src,unsigned long flags)
 	// Keep a copy of the zipfileinfo, for our end-of-zip directory
 	char *cextra = new char[zfi.cext]; memcpy(cextra,zfi.cextra,zfi.cext); zfi.cextra=cextra;
 	TZipFileInfo *pzfi = new TZipFileInfo; memcpy(pzfi,&zfi,sizeof(zfi));
-	if (zfis==NULL) 
+	if (zfis==nullptr)
 		zfis=pzfi;
-	else 
+	else
 	{
-		TZipFileInfo *z=zfis; 
-		while (z->nxt!=NULL) 
-			z=z->nxt; 
+		TZipFileInfo *z=zfis;
+		while (z->nxt!=nullptr)
+			z=z->nxt;
 		z->nxt=pzfi;
 	}
 	return ZR_OK;
@@ -954,12 +955,12 @@ ZRESULT TZip::AddCentral()
 	ulg pos_at_start_of_central = writ;
 	//ulg tot_unc_size=0, tot_compressed_size=0;
 	bool okay=true;
-	for (TZipFileInfo *zfi=zfis; zfi!=NULL; )
+	for (TZipFileInfo *zfi=zfis; zfi!=nullptr; )
 	{
 		if (okay)
 		{
 			int res = putcentral(zfi, swrite,this);
-			if (res!=ZE_OK) 
+			if (res!=ZE_OK)
 				okay=false;
 		}
 		writ += 4 + CENHEAD + (unsigned int)zfi->nam + (unsigned int)zfi->cext + (unsigned int)zfi->com;
@@ -974,13 +975,13 @@ ZRESULT TZip::AddCentral()
 	}
 	ulg center_size = writ - pos_at_start_of_central;
 	if (okay)
-	{ 
-		int res = putend(numentries, center_size, pos_at_start_of_central+ooffset, 0, NULL, swrite,this);
+	{
+		int res = putend(numentries, center_size, pos_at_start_of_central+ooffset, 0, nullptr, swrite,this);
 		if (res!=ZE_OK)
 			okay=false;
 		writ += 4 + ENDHEAD + 0;
 	}
-	if (!okay) 
+	if (!okay)
 		return ZR_WRITE;
 	return ZR_OK;
 }
@@ -994,7 +995,12 @@ ZRESULT lasterrorZ=ZR_OK;
 
 CreateZip::CreateZip()
 {
-	hz=NULL;
+	hz=nullptr;
+}
+
+CreateZip::~CreateZip()
+{
+	delete hz;
 }
 
 bool CreateZip::Start( RageFile *f)
@@ -1003,29 +1009,29 @@ bool CreateZip::Start( RageFile *f)
 	lasterrorZ = hz->Start(f);
 	return lasterrorZ == ZR_OK;
 }
-RString MakeDestZipFileName( RString fn )
+std::string MakeDestZipFileName( std::string fn )
 {
 	// strip leading slash
 	fn.erase( fn.begin(), fn.begin()+1 );
 	return fn;
 }
-bool CreateZip::AddFile(RString fn)
+bool CreateZip::AddFile(std::string fn)
 {
-	lasterrorZ = hz->Add(MakeDestZipFileName(fn),fn,ZIP_FILENAME);
+	lasterrorZ = hz->Add(MakeDestZipFileName(fn).c_str(),fn.c_str(),ZIP_FILENAME);
 	return lasterrorZ == ZR_OK;
 }
-bool CreateZip::AddDir(RString fn)
+bool CreateZip::AddDir(std::string fn)
 {
-	lasterrorZ = hz->Add(MakeDestZipFileName(fn),NULL,ZIP_FOLDER);
+	lasterrorZ = hz->Add(MakeDestZipFileName(fn).c_str(),nullptr,ZIP_FOLDER);
 	return lasterrorZ == ZR_OK;
 }
 bool CreateZip::Finish()
-{ 
+{
 	lasterrorZ = hz->Close();
 	return lasterrorZ == ZR_OK;
 }
 
-RString CreateZip::GetError()
+std::string CreateZip::GetError()
 {
 	return FormatZipMessageZ( lasterrorZ );
 }

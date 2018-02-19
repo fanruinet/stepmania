@@ -4,6 +4,10 @@ Warning
 Using CMake is considered stable, but not every single combination is known to work.
 Using the defaults as suggested should cause minimal problems.
 
+Prerequisites
+==
+Before you you can use CMake, make sure the git submodules are initialized. In the parent directory, run `git submodule init` and `git submodule update` to have the submodules initialized.
+
 Install CMake
 ==
 
@@ -50,6 +54,8 @@ For the first setup, you will want to run this command:
 `cmake -G {YourGeneratorHere} .. && cmake ..`
 
 Replace {YourGeneratorHere} with one of the generator choices from `cmake --help`. As an example, Mac OS X users that want to have Xcode used would run `cmake -G Xcode .. && cmake ..` on their Terminal program.
+
+If you are building on Windows and expecting your final executable to be able to run on Windows XP, append an additional parameter `-T "v140_xp"` (or `-T "v120_xp"`, depending on which version of Visual Studio you have installed) to your command line.
 
 If any cmake project file changes, you can just run `cmake .. && cmake ..` to get up to date.
 If this by itself doesn't work, you may have to clean the cmake cache.

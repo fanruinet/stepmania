@@ -13,12 +13,23 @@ local NumberMaxZoomAt = THEME:GetMetric("Combo", "NumberMaxZoomAt");
 local LabelMinZoom = THEME:GetMetric("Combo", "LabelMinZoom");
 local LabelMaxZoom = THEME:GetMetric("Combo", "LabelMaxZoom");
 
-local ShowFlashyCombo = ThemePrefs.Get("FlashyCombo")
+local ShowFlashyCombo = player_config:get_data(player).FlashyCombo
 
 local t = Def.ActorFrame {
-	InitCommand=cmd(vertalign,bottom);
+	InitCommand= function(self)
+		if player_config:get_data(player).ComboUnderField then
+			self:draworder(notefield_draw_order.under_field)
+		else
+			self:draworder(notefield_draw_order.over_field)
+		end
+		c = self:GetChildren();
+		cf = c.ComboFrame:GetChildren();
+		cf.Number:visible(false);
+		cf.ComboLabel:visible(false)
+		cf.MissLabel:visible(false)
+	end,
 	-- flashy combo elements:
- 	LoadActor(THEME:GetPathG("Combo","100Milestone")) .. {
+	LoadActor(THEME:GetPathG("Combo","100Milestone"), player) .. {
 		Name="OneHundredMilestone";
 		InitCommand=cmd(visible,ShowFlashyCombo);
 		FiftyMilestoneCommand=cmd(playcommand,"Milestone");
@@ -35,22 +46,21 @@ local t = Def.ActorFrame {
 			Name="Number";
 			OnCommand = THEME:GetMetric("Combo", "NumberOnCommand");
 		};
-		LoadActor("_combo")..{
+		LoadFont("_roboto condensed Bold italic 24px") .. {
 			Name="ComboLabel";
-			OnCommand = THEME:GetMetric("Combo", "ComboLabelOnCommand");
+			InitCommand=function(self)
+				self:settext(string.upper(THEME:GetString("ScreenGameplay","Combo")));
+			end;
+			OnCommand = THEME:GetMetric("Combo", "LabelOnCommand");
 		};
-		LoadActor("_misses")..{
+		LoadFont("_roboto condensed Bold italic 24px") .. {
 			Name="MissLabel";
+			InitCommand=function(self)
+				self:settext(string.upper(THEME:GetString("ScreenGameplay","Misses")));
+			end;
 			OnCommand = THEME:GetMetric("Combo", "MissLabelOnCommand");
 		};
 	};
-	InitCommand = function(self)
-		c = self:GetChildren();
-		cf = c.ComboFrame:GetChildren();
-		cf.Number:visible(false);
-		cf.ComboLabel:visible(false)
-		cf.MissLabel:visible(false)
-	end;
 	-- Milestones:
 	-- 25,50,100,250,600 Multiples;
 --[[ 		if (iCombo % 100) == 0 then
@@ -107,23 +117,16 @@ local t = Def.ActorFrame {
 
 		cf.Number:visible(true);
 		cf.Number:settext( string.format("%i", iCombo) );
-        cf.Number:textglowmode("TextGlowMode_Stroke");
 		-- FullCombo Rewards
 		if param.FullComboW1 then
-			cf.Number:diffuse( GameColor.Judgment["JudgmentLine_W1"] );
-			cf.Number:strokecolor( GameColor.Judgment["JudgmentLine_W1"] );
-            cf.Number:textglowmode("TextGlowMode_Stroke");
-			cf.Number:glowshift();
+			cf.Number:diffuse(color("#00aeef"));
+			cf.ComboLabel:diffuse(color("#C7E5F0")):diffusebottomedge(color("#00aeef")):strokecolor(color("#0E3D53"));
 		elseif param.FullComboW2 then
-			cf.Number:diffuse( GameColor.Judgment["JudgmentLine_W2"] );
-			cf.Number:strokecolor( GameColor.Judgment["JudgmentLine_W2"] );
-            cf.Number:textglowmode("TextGlowMode_Stroke");
-			cf.Number:glowshift();
+			cf.Number:diffuse(color("#F3D58D"));
+			cf.ComboLabel:diffuse(color("#FAFAFA")):diffusebottomedge(color("#F3D58D")):strokecolor(color("#53450E"));
 		elseif param.FullComboW3 then
-			cf.Number:diffuse( GameColor.Judgment["JudgmentLine_W3"] );
-			cf.Number:strokecolor( GameColor.Judgment["JudgmentLine_W3"] );
-            cf.Number:textglowmode("TextGlowMode_Stroke");
-			cf.Number:glowshift();
+			cf.Number:diffuse(color("#94D658"));
+			cf.ComboLabel:diffuse(color("#CFE5BC")):diffusebottomedge(color("#94D658")):strokecolor(color("#12530E"));
 		elseif param.Combo then
 			-- Player 1's color is Red, which conflicts with the miss combo.
 			-- instead, just diffuse to white for now. -aj
@@ -131,8 +134,13 @@ local t = Def.ActorFrame {
 			cf.Number:diffuse(Color("White"));
 			cf.Number:strokecolor(Color("Stealth"));
 			cf.Number:stopeffect();
+			cf.ComboLabel:diffuse(color("#F5CB92")):diffusebottomedge(color("#EFA97A")):strokecolor(color("#602C1B"));
 		else
 			cf.Number:diffuse(color("#ff0000"));
+			cf.MissLabel:diffuse(color("#ff0000"));
+			cf.ComboLabel:diffuse(color("#ff0000"));
+			cf.MissLabel:strokecolor(color("#000000"));
+			cf.ComboLabel:strokecolor(color("#000000"));
 			cf.Number:stopeffect();
 		end
 		-- Pulse

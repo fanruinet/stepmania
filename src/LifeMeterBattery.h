@@ -23,12 +23,15 @@ public:
 	virtual void ChangeLife( TapNoteScore score );
 	virtual void ChangeLife( HoldNoteScore score, TapNoteScore tscore );
 	virtual void ChangeLife( float fDeltaLifePercent );
+	virtual void SetLife(float value);
 	virtual void HandleTapScoreNone();
 	virtual bool IsInDanger() const;
 	virtual bool IsHot() const;
 	virtual bool IsFailing() const;
 	virtual float GetLife() const;
 	virtual int GetRemainingLives() const;
+
+	virtual void BroadcastLifeChanged(bool lost_life);
 
 	void Refresh();
 	int GetLivesLeft() { return m_iLivesLeft; }
@@ -54,7 +57,7 @@ private:
 	ThemeMetric<int>	HELD_ADD_LIVES;
 	ThemeMetric<int>	LET_GO_SUBTRACT_LIVES;
 	ThemeMetric<LuaReference> COURSE_SONG_REWARD_LIVES;
-	ThemeMetric<RString> LIVES_FORMAT;
+	ThemeMetric<std::string> LIVES_FORMAT;
 
 	AutoActor	m_sprFrame;
 	AutoActor	m_sprBattery;

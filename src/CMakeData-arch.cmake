@@ -191,7 +191,14 @@ list(APPEND SMDATA_ARCH_LOWLEVEL_HPP
   "arch/LowLevelWindow/LowLevelWindow.h"
 )
 
-if(WIN32)
+if(SDL2_FOUND)
+  list(APPEND SMDATA_ARCH_LOWLEVEL_SRC
+    "arch/LowLevelWindow/LowLevelWindow_SDL.cpp"
+  )
+  list(APPEND SMDATA_ARCH_LOWLEVEL_HPP
+    "arch/LowLevelWindow/LowLevelWindow_SDL.h"
+  )
+elseif(WIN32)
   list(APPEND SMDATA_ARCH_LOWLEVEL_SRC
     "arch/LowLevelWindow/LowLevelWindow_Win32.cpp"
   )
@@ -205,16 +212,14 @@ elseif(APPLE)
   list(APPEND SMDATA_ARCH_LOWLEVEL_HPP
     "arch/LowLevelWindow/LowLevelWindow_MacOSX.h"
   )
-else(UNIX)
-  if (X11_FOUND)
-    list(APPEND SMDATA_ARCH_LOWLEVEL_SRC
-      "arch/LowLevelWindow/LowLevelWindow_X11.cpp"
-    )
-    list(APPEND SMDATA_ARCH_LOWLEVEL_HPP
-      "arch/LowLevelWindow/LowLevelWindow_X11.h"
-    )
-  endif()
-endif(WIN32)
+elseif (X11_FOUND)
+  list(APPEND SMDATA_ARCH_LOWLEVEL_SRC
+    "arch/LowLevelWindow/LowLevelWindow_X11.cpp"   
+  )
+  list(APPEND SMDATA_ARCH_LOWLEVEL_HPP
+    "arch/LowLevelWindow/LowLevelWindow_X11.h"
+  )
+endif()
 
 source_group("Arch Specific\\\\Low Level Window" FILES ${SMDATA_ARCH_LOWLEVEL_SRC} ${SMDATA_ARCH_LOWLEVEL_HPP})
 
@@ -266,6 +271,13 @@ list(APPEND SMDATA_ARCH_LIGHTS_HPP
   "arch/Lights/LightsDriver_SystemMessage.h"
 )
 
+list(APPEND SMDATA_ARCH_LIGHTS_SRC
+  "arch/Lights/LightsDriver_SextetStream.cpp"
+)
+list(APPEND SMDATA_ARCH_LIGHTS_HPP
+  "arch/Lights/LightsDriver_SextetStream.h"
+)
+
 # TODO: Confirm if Apple can use the export.
 if(NOT APPLE)
   list(APPEND SMDATA_ARCH_LIGHTS_SRC
@@ -275,21 +287,14 @@ if(NOT APPLE)
     "arch/Lights/LightsDriver_Export.h"
   )
   
-  if(NOT MSVC)
-    list(APPEND SMDATA_ARCH_LIGHTS_SRC
-      "arch/Lights/LightsDriver_SextetStream.cpp"
-    )
-    list(APPEND SMDATA_ARCH_LIGHTS_SRC
-      "arch/Lights/LightsDriver_SextetStream.h"
-    )
-  endif()
-  
   if(WIN32)
     list(APPEND SMDATA_ARCH_LIGHTS_SRC
       "arch/Lights/LightsDriver_Win32Parallel.cpp"
+      "arch/Lights/LightsDriver_PacDrive.cpp"
     )
     list(APPEND SMDATA_ARCH_LIGHTS_HPP
       "arch/Lights/LightsDriver_Win32Parallel.h"
+      "arch/Lights/LightsDriver_PacDrive.h"
     )
     if (WITH_MINIMAID)
       list(APPEND SMDATA_ARCH_LIGHTS_SRC
@@ -321,6 +326,14 @@ if(NOT APPLE)
           "arch/Lights/LightsDriver_LinuxParallel.h"
         )
       endif()
+      if (WITH_MINIMAID)
+        list(APPEND SMDATA_ARCH_LIGHTS_SRC
+          "arch/Lights/LightsDriver_LinuxMinimaid.cpp"
+        )
+        list(APPEND SMDATA_ARCH_LIGHTS_HPP
+          "arch/Lights/LightsDriver_LinuxMinimaid.h"
+        )
+      endif()
     endif()
   endif(WIN32)
 endif(NOT APPLE)
@@ -335,6 +348,15 @@ list(APPEND SMDATA_ARCH_INPUT_HPP
   "arch/InputHandler/InputHandler.h"
   "arch/InputHandler/InputHandler_MonkeyKeyboard.h"
 )
+
+if(SDL2_FOUND)
+  list(APPEND SMDATA_ARCH_INPUT_SRC
+    "arch/InputHandler/InputHandler_SDL.cpp"
+  )
+  list(APPEND SMDATA_ARCH_INPUT_SRC
+    "arch/InputHandler/InputHandler_SDL.h"
+  )
+endif()
 
 if(WIN32)
   list(APPEND SMDATA_ARCH_INPUT_SRC

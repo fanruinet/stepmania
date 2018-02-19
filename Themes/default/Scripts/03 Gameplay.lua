@@ -1,26 +1,13 @@
--- StepMania 5 default theme | script ring 03 | Gameplay.lua
--- someone thought it'd be a good idea to put theme preferences into the fallback
--- when they should've been in default instead. there is no emoticon for how i feel
--- at this moment right now -freem
-
--- for example, not every theme wants to worry about custom receptor positions.
-local tNotePositions = {
-	-- StepMania 3.9/4.0
-	Normal = { -144, 144, },
-	-- ITG
-	Lower = { -125, 145, }
-}
-
-function GetTapPosition( sType )
-	bCategory = (sType == 'Standard') and 1 or 2
-	-- true: Normal
-	-- false: Lower
-	bPreference = ThemePrefs.Get("NotePosition") and "Normal" or "Lower"
-	tNotePos = tNotePositions[bPreference]
-	return tNotePos[bCategory]
-end
-
--- combo under field is another thing that doesn't always need to be custom
-function ComboUnderField()
-	return ThemePrefs.Get("ComboUnderField")
+-- The name's misleading; this is used for SelectPlayMode.
+function ScreenSelectStylePositions(count)
+	local poses= {}
+	local choice_size = 192
+	
+	for i= 1, count do
+		local start_x = _screen.cx + ( (choice_size / 1.5) * ( i - math.ceil(count/2) ) )
+		local start_y = i % 2 == 0 and _screen.cy / 0.8 or (_screen.cy / 0.8) - (choice_size / 1.5)
+		poses[#poses+1] = {start_x, start_y}
+	end
+	
+	return poses
 end

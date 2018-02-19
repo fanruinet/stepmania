@@ -82,6 +82,8 @@ PBProject/Hardware.plist
 *.exp
 *.ilk
 *.map
+*.aps
+*.res
 
 # Windows General Files
 Thumbs.db
@@ -160,6 +162,7 @@ src/libtommath/Release-*
 src/libtommath/Debug
 src/*.so
 ffmpeg-*
+!ffmpeg-git
 Data/SpeedMods.txt
 crashinfo.txt
 Utils/temp*

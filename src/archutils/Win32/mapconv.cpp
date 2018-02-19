@@ -36,7 +36,7 @@ char *strtack(char *s, const char *t, const char *s_max) {
 		++s, ++t;
 
 	if (s == s_max)
-		return NULL;
+		return nullptr;
 
 	return s+1;
 }
@@ -106,7 +106,6 @@ struct RVASorter {
 };
 
 int main(int argc, char **argv) {
-	int i;
 	long load_addr;
 
 	if (argc<3) {
@@ -142,7 +141,7 @@ int main(int argc, char **argv) {
 		while(readline()) {
 			long grp, start, len;
 
-			if (3!=sscanf(line, "%lx:%lx %lx", &grp, &start, &len))
+			if (3!=sscanf(line, "%ld:%ld %ld", &grp, &start, &len))
 				break;
 
 			if (strstr(line+49, "CODE")) {
@@ -168,10 +167,10 @@ int main(int argc, char **argv) {
 
 		while(readline()) {
 			long grp, start, rva;
-			char symname[2048];
+			char symname[4096];
 			int i;
 
-			if (4!=sscanf(line, "%lx:%lx %s %lx", &grp, &start, symname, &rva))
+			if (4!=sscanf(line, "%ld:%ld %4095s %ld", &grp, &start, symname, &rva))
 				break;
 
 			if (!(codeseg_flags & (1<<grp)) && strcmp(symname, "___ImageBase") )
@@ -195,7 +194,7 @@ int main(int argc, char **argv) {
 				long grp, start, rva;
 				char symname[4096];
 
-				if (4!=sscanf(line, "%lx:%lx %s %lx", &grp, &start, symname, &rva))
+				if (4!=sscanf(line, "%ld:%ld %4095s %ld", &grp, &start, symname, &rva))
 					break;
 
 				if (!(codeseg_flags & (1<<grp)))
@@ -215,11 +214,11 @@ int main(int argc, char **argv) {
 
 //		printf("Processing RVA entries...\n");
 
-		for(i=0; i<rvabuf.size(); i++) {
+		for(int i=0; i<rvabuf.size(); i++) {
 			long grp, start, rva;
 			char symname[4096];
 
-			sscanf(rvabuf[i].line, "%lx:%lx %s %lx", &grp, &start, symname, &rva);
+			sscanf(rvabuf[i].line, "%ld:%ld %4095s %ld", &grp, &start, symname, &rva);
 
 			grpstart[grp] = rva - start;
 
@@ -228,7 +227,7 @@ int main(int argc, char **argv) {
 		
 //		printf("Processing segment entries...\n");
 
-		for(i=0; i<segcnt; i++) {
+		for(int i=0; i<segcnt; i++) {
 			segbuf[i][0] += grpstart[seggrp[i]];
 //			printf("\t#%-2d  %08lx-%08lx\n", i+1, segbuf[i][0], segbuf[i][0]+segbuf[i][1]-1);
 		}

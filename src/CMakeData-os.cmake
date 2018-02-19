@@ -1,5 +1,6 @@
 if(APPLE)
   list(APPEND SMDATA_OS_DARWIN_SRC
+    "archutils/Darwin/Backtrace.mm"
     "archutils/Darwin/Crash.cpp"
     "archutils/Darwin/DarwinThreadHelpers.cpp"
     "archutils/Darwin/HIDDevice.cpp"
@@ -13,6 +14,7 @@ if(APPLE)
   )
   list(APPEND SMDATA_OS_DARWIN_HPP
     "archutils/Darwin/arch_setup.h"
+    "archutils/Darwin/Backtrace.hpp"
     "archutils/Darwin/Crash.h"
     "archutils/Darwin/DarwinThreadHelpers.h"
     "archutils/Darwin/HIDDevice.h"
@@ -46,6 +48,7 @@ else()
       "archutils/Win32/CrashHandlerNetworking.cpp"
       "archutils/Win32/DebugInfoHunt.cpp"
       "archutils/Win32/DialogUtil.cpp"
+	  "archutils/Win32/DirectXGuids.cpp"
       "archutils/Win32/DirectXHelpers.cpp"
       "archutils/Win32/ErrorStrings.cpp"
       "archutils/Win32/GetFileInformation.cpp"
@@ -128,16 +131,24 @@ endif()
 
 if(APPLE OR LINUX)
   if (WITH_CRASH_HANDLER)
+    if (NOT APPLE)
+      list(APPEND SMDATA_OS_UNIX_CRASH_SRC
+        "archutils/Unix/Backtrace.cpp"
+      )
+    endif()
     list(APPEND SMDATA_OS_UNIX_CRASH_SRC
-      "archutils/Unix/Backtrace.cpp"
       "archutils/Unix/BacktraceNames.cpp"
       "archutils/Unix/CrashHandler.cpp"
       "archutils/Unix/CrashHandlerChild.cpp"
       "archutils/Unix/CrashHandlerInternal.cpp"
       "archutils/Unix/SignalHandler.cpp"
     )
+    if (NOT APPLE)
+      list(APPEND SMDATA_OS_UNIX_CRASH_HPP
+        "archutils/Unix/Backtrace.h"
+      )
+    endif()
     list(APPEND SMDATA_OS_UNIX_CRASH_HPP
-      "archutils/Unix/Backtrace.h"
       "archutils/Unix/BacktraceNames.h"
       "archutils/Unix/CrashHandler.h"
       "archutils/Unix/CrashHandlerInternal.h"

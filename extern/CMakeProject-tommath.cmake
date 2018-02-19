@@ -1,4 +1,8 @@
-set(TOMDIR "${SM_SRC_DIR}/libtommath")
+set(TOMDIR "${SM_EXTERN_DIR}/tommath")
+
+if (NOT IS_DIRECTORY "${TOMDIR}")
+  message(ERROR "Submodule for tommath missing. Run git submodule init && git submodule update first.")
+endif()
 
 list(APPEND TOMMATH_SRC
   "${TOMDIR}/bn_error.c"
@@ -131,7 +135,7 @@ list(APPEND TOMMATH_HPP
 source_group("" FILES ${TOMMATH_SRC})
 source_group("" FILES ${TOMMATH_HPP})
 
-add_library("tommath" ${TOMMATH_SRC} ${TOMMATH_HPP})
+add_library("tommath" STATIC ${TOMMATH_SRC} ${TOMMATH_HPP})
 
 set_property(TARGET "tommath" PROPERTY FOLDER "External Libraries")
 
